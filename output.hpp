@@ -19,6 +19,17 @@
 
 using namespace std;
 
+// Copies the input field into the output field
+void copyField(Field<Cplx> * input, Field<Cplx> *output = NULL)
+{
+    rKSite x(input->lattice());
+    if (output != NULL){
+        for(x.first(); x.test(); x.next()){
+            (*output)(x) = (*input)(x);
+        }
+    }
+}
+
 
 //////////////////////////
 // writeSnapshots
@@ -1770,6 +1781,9 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 #ifdef VELOCITY
 , Field<Real> * vi, Field<Cplx> * viFT, PlanFFT<Cplx> * plan_vi
 #endif
+#ifdef CROSS_SPECTRA
+, Field<Cplx> scalarFTcross[]
+#endif
 )
 {
 	char filename[2*PARAM_MAX_LENGTH+24];
@@ -1948,6 +1962,17 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 		extractPowerSpectrum(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
 		sprintf(filename, "%s%s%03d_phi.dat", sim.output_path, sim.basename_pk, pkcount);
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "power spectrum of phi", a, sim.z_pk[pkcount]);
+
+#ifdef CROSS_SPECTRA
+        copyField(scalarFT, &(scalarFTcross[pkcount]));
+        // outputs the power spectra P_phi(k, z_1, z_2)
+        for (int i = 0; i<=pkcount; ++i){
+            extractCrossSpectrum(scalarFTcross[i], *scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, false, KTYPE_LINEAR);
+            sprintf(filename, "%s%s%03d_phi_%03d.dat", sim.output_path, sim.basename_pk, pkcount, i);
+            writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI, filename, "cross spectrum of phi(z1) and phi(z2)", a);
+        }
+#endif
+
 	}
 			
 	if (sim.out_pk & MASK_CHI)

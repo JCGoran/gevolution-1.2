@@ -255,6 +255,14 @@ int main(int argc, char **argv)
 	PlanFFT<Cplx> plan_vi(&vi, &viFT);
 	double a_old;
 #endif
+// for unequal time cross spectra
+#ifdef CROSS_SPECTRA
+    Field<Cplx> scalarFTcross[sim.num_pk];
+    for (int i = 0; i<sim.num_pk; ++i){
+        scalarFTcross[i].initialize(latFT, 1);
+        scalarFTcross[i].alloc();
+    }
+#endif
 
 	update_cdm_fields[0] = &phi;
 	update_cdm_fields[1] = &chi;
@@ -647,6 +655,9 @@ int main(int argc, char **argv)
 #ifdef VELOCITY
 				, &vi, &viFT, &plan_vi
 #endif
+#ifdef CROSS_SPECTRA
+                , scalarFTcross
+#endif
 			);
 
 			pkcount++;
@@ -669,6 +680,9 @@ int main(int argc, char **argv)
 #endif
 #ifdef VELOCITY
 				, &vi, &viFT, &plan_vi
+#endif
+#ifdef CROSS_SPECTRA
+                , scalarFTcross
 #endif
 			);
 		}
