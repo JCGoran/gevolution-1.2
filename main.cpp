@@ -211,6 +211,7 @@ int main(int argc, char **argv)
 	latFT.initializeRealFFT(lat,0);
 	
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_cdm;
+    Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_cdm_copy;
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_b;
 	Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> pcls_ncdm[MAX_PCL_SPECIES-2];
 	Field<Real> * update_cdm_fields[3];
@@ -293,12 +294,12 @@ int main(int argc, char **argv)
 	dtau_old = 0.;
 	
 	if (ic.generator == ICGEN_BASIC)
-		generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, params, numparam); // generates ICs on the fly
+		generateIC_basic(sim, ic, cosmo, fourpiG, &pcls_cdm, &pcls_cdm_copy, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, params, numparam); // generates ICs on the fly
 	else if (ic.generator == ICGEN_READ_FROM_DISK)
-		readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, IDbacklog);
+		readIC(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_cdm_copy, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, cycle, snapcount, pkcount, restartcount, IDbacklog);
 #ifdef ICGEN_PREVOLUTION
 	else if (ic.generator == ICGEN_PREVOLUTION)
-		generateIC_prevolution(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, params, numparam);
+		generateIC_prevolution(sim, ic, cosmo, fourpiG, a, tau, dtau, dtau_old, &pcls_cdm, &pcls_cdm_copy, &pcls_b, pcls_ncdm, maxvel, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij, params, numparam);
 #endif
 #ifdef ICGEN_FALCONIC
 	else if (ic.generator == ICGEN_FALCONIC)
@@ -649,6 +650,18 @@ int main(int argc, char **argv)
 #endif
 			);
 
+            // conformal Hubble factor
+            f_params[0] = Hconf(a, fourpiG, cosmo);
+            // copy values
+            Site x(pcls_cdm.lattice());
+            for(x.first();x.test();x.next()){
+                pcls_cdm_copy.field()(x).size = 0;
+                pcls_cdm_copy.field()(x).parts.clear();
+                pcls_cdm_copy.field()(x) = pcls_cdm.field()(x);
+            }
+            // move the particles
+            pcls_cdm_copy.moveParticles(move_redshift_space, dtau, NULL, 0, f_params);
+            // TODO output the power spectrum somehow
 			pkcount++;
 		}
 

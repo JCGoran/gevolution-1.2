@@ -1501,5 +1501,27 @@ void projectFTomega(Field<Cplx> & viFT)
 	free(gridk2);
 }
 
+
+/** displaces the particles in redshift space along the 0 direction **/
+void move_redshift_space(
+    double dtau,
+    double lat_resolution,
+    part_simple * part,
+    double * ref_dist,
+    part_simple_info partInfo,
+    Field<Real> ** fields,
+    Site * sites,
+    int nfield,
+    double * params,
+    double * outputs,
+    int noutputs
+)
+{
+    // make sure params is not null so gevolution doesn't crash
+    if (params != nullptr)
+        // move according to s_i = x_i + \delta_{iz} v_z / Hconf(z)
+        (*part).pos[0] += (*part).vel[0] / params[0];
+}
+
 #endif
 
