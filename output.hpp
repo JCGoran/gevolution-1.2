@@ -1772,6 +1772,8 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 #endif
 )
 {
+	const int numbinsmu = 100; 
+
 	char filename[2*PARAM_MAX_LENGTH+24];
 	char buffer[64];
 	int i, j;
@@ -1782,6 +1784,7 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 	double Omega_ncdm;
 
 	Real * kbin;
+	Real * mubin;
 	Real * power;
 	Real * kscatter;
 	Real * pscatter;
@@ -2026,6 +2029,21 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 			sprintf(filename, "%s%s%03d_delta.dat", sim.output_path, sim.basename_pk, pkcount);
 			writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta", a, sim.z_pk[pkcount]);
 		}
+
+        /* Here we modify for the redshift space power-spectrum */
+				if (sim.out_pk & MASK_T00)
+		{
+			sprintf(filename, "%s%s%03d_T00RedshiftSpace.dat", sim.output_path, sim.basename_pk, pkcount);
+			writePowerSpectrumRedshiftSpace(kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00", a, sim.z_pk[pkcount]);
+		}
+
+		if (sim.out_pk & MASK_DELTA)
+		{
+			sprintf(filename, "%s%s%03d_deltaRedshiftSpace.dat", sim.output_path, sim.basename_pk, pkcount);
+			writePowerSpectrumRedshiftSpace(kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta", a, sim.z_pk[pkcount]);
+		}
+
+		/* End of modifications */
 				
 		if (cosmo.num_ncdm > 0 || sim.baryon_flag || sim.radiation_flag > 0 || sim.fluid_flag > 0)
 		{
