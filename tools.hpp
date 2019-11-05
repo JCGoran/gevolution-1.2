@@ -291,7 +291,7 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 			
 		k2 = typek2[k.coord(0)] + typek2[k.coord(1)] + typek2[k.coord(2)];
         /* Compute mu */
-        mu = k.coord(0)/sqrt(k2)
+        mu = k.coord(0)/sqrt(k2);
 		s = sinc[k.coord(0)] * sinc[k.coord(1)] * sinc[k.coord(2)];
 		s *= s;
 		
@@ -317,8 +317,8 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 		}
 		
 		i = (int) floor((double) ((Real) numbins * sqrt(k2 / k2max)));
-		j = floor((numbinsmu-1.0)/2. * mu + (numbinsmu-1.0)/2.)
-		index = numbins*i + j
+		j = floor((numbinsmu-1.0)/2. * mu + (numbinsmu-1.0)/2.);
+		index = numbins*i + j;
 		if (index < numbins*numbinsmu) /*((i < numbins) && (j < numbinsmu))*/
 		{
 			kbin[index] += weight * sqrt(k2);
