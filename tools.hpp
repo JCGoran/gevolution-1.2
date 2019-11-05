@@ -339,11 +339,13 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 
 #ifdef SINGLE
 		MPI_Reduce(MPI_IN_PLACE, (void *) kbin, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce(MPI_IN_PLACE, (void *) mubin, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce(MPI_IN_PLACE, (void *) kscatter, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce(MPI_IN_PLACE, (void *) power, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce(MPI_IN_PLACE, (void *) pscatter, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
 #else
 		MPI_Reduce(MPI_IN_PLACE, (void *) kbin, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce(MPI_IN_PLACE, (void *) mubin, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce(MPI_IN_PLACE, (void *) kscatter, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce(MPI_IN_PLACE, (void *) power, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce(MPI_IN_PLACE, (void *) pscatter, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
@@ -358,6 +360,7 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 				kscatter[index] = sqrt(kscatter[index]  * occupation[index] - kbin[index] * kbin[index]) / occupation[index];
 				if (!isfinite(kscatter[index])) kscatter[index] = 0.;
 				kbin[index] = kbin[index] / occupation[index];
+				mubin[index] = mubin[index] / occupation[index];
 				power[index] /= occupation[index];
 				pscatter[index] = sqrt(pscatter[index] / occupation[index] - power[index] * power[index]);
 				if (!isfinite(pscatter[index])) pscatter[index] = 0.;
@@ -528,7 +531,7 @@ void writePowerSpectrumRedshiftSpace(Real * kbin, Real * mubin, Real * power, Re
 	if (parallel.isRoot())
 	{
 #ifdef EXACT_OUTPUT_REDSHIFTS
-		Real * power2 = (Real *) malloc(numbins * sizeof(Real));
+		Real * power2 = (Real *) malloc(numbins * numbinsmu * sizeof(Real));
 
 		for (int i = 0; i < numbins*numbinsmu; i++)
 			power2[i] = power[i]/rescalep;
@@ -586,7 +589,7 @@ void writePowerSpectrumRedshiftSpace(Real * kbin, Real * mubin, Real * power, Re
 			fprintf(outfile, "# %s\n", description);
 			fprintf(outfile, "# redshift z=%f\n", (1./a)-1.);
 			fprintf(outfile, "# k              mu           Pk             sigma(k)       sigma(Pk)      count\n");
-			for (int i = 0; i < numbins; i++)
+			for (int i = 0; i < numbins * numbinsmu; i++)
 			{
 				if (occupation[i] > 0)
 #ifdef EXACT_OUTPUT_REDSHIFTS
