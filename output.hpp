@@ -2035,12 +2035,14 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 				if (sim.out_pk & MASK_T00)
 		{
 			sprintf(filename, "%s%s%03d_T00RedshiftSpace.dat", sim.output_path, sim.basename_pk, pkcount);
+			extractPowerSpectrumRedshiftSpace(*scalarFT, kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, true, KTYPE_LINEAR);
 			writePowerSpectrumRedshiftSpace(kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00", a, sim.z_pk[pkcount]);
 		}
 
 		if (sim.out_pk & MASK_DELTA)
 		{
 			sprintf(filename, "%s%s%03d_deltaRedshiftSpace.dat", sim.output_path, sim.basename_pk, pkcount);
+			extractPowerSpectrumRedshiftSpace(*scalarFT, kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, true, KTYPE_LINEAR);
 			writePowerSpectrumRedshiftSpace(kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta", a, sim.z_pk[pkcount]);
 		}
 

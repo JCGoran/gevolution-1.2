@@ -269,9 +269,10 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 	
 	k2max = 3. * typek2[linesize/2];
 	
-	for (i = 0; i < numbins; i++)
+	for (i = 0; i < numbins * numbinsmu; i++)
 	{
 		kbin[i] = 0.;
+        mubin[i] = 0.;
 		power[i] = 0.;
 		kscatter[i] = 0.;
 		pscatter[i] = 0.;
@@ -317,8 +318,8 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 		}
 		
 		i = (int) floor((double) ((Real) numbins * sqrt(k2 / k2max)));
-		j = floor((numbinsmu-1.0)/2. * mu + (numbinsmu-1.0)/2.);
-		index = numbins*i + j;
+		j = floor((numbinsmu-1.0) * mu);
+		index = numbinsmu * i + j;
 		if (index < numbins*numbinsmu) /*((i < numbins) && (j < numbinsmu))*/
 		{
 			kbin[index] += weight * sqrt(k2);
@@ -372,11 +373,13 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 	{
 #ifdef SINGLE
 		MPI_Reduce((void *) kbin, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce((void *) mubin, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce((void *) kscatter, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce((void *) power, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce((void *) pscatter, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
 #else
 		MPI_Reduce((void *) kbin, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce((void *) mubin, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce((void *) kscatter, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce((void *) power, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
 		MPI_Reduce((void *) pscatter, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
