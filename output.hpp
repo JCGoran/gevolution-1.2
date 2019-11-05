@@ -1790,11 +1790,12 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 	Real * pscatter;
 	int * occupation;
 
-	kbin = (Real *) malloc(sim.numbins * sizeof(Real));
-	power = (Real *) malloc(sim.numbins * sizeof(Real));
-	kscatter = (Real *) malloc(sim.numbins * sizeof(Real));
-	pscatter = (Real *) malloc(sim.numbins * sizeof(Real));
-	occupation = (int *) malloc(sim.numbins * sizeof(int));
+	kbin = (Real *) malloc(sim.numbins * numbinsmu * sizeof(Real));
+    mubin = (Real *) malloc(sim.numbins * numbinsmu * sizeof(Real));
+	power = (Real *) malloc(sim.numbins * numbinsmu * sizeof(Real));
+	kscatter = (Real *) malloc(sim.numbins * numbinsmu *sizeof(Real));
+	pscatter = (Real *) malloc(sim.numbins * numbinsmu *sizeof(Real));
+	occupation = (int *) malloc(sim.numbins * numbinsmu *sizeof(int));
 
 	if (sim.out_pk & MASK_RBARE || sim.out_pk & MASK_DBARE || sim.out_pk & MASK_POT || ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.gr_flag == 0))
 	{
