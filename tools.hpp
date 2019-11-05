@@ -409,6 +409,13 @@ void extractPowerSpectrum(Field<Cplx> & fldFT, Real * kbin, Real * power, Real *
 {
 	extractCrossSpectrum(fldFT, fldFT, kbin, power, kscatter, pscatter, occupation, numbins, deconvolve, ktype);
 }
+
+
+void extractPowerSpectrumRedshiftSpace(Field<Cplx> & fldFT, Real * kbin, Real * mubin, Real * power, Real * kscatter, Real * pscatter, int * occupation, const int numbins, const int numbinsmu, const bool deconvolve = true, const int ktype = KTYPE_LINEAR)
+{
+	extractCrossSpectrumRedshiftSpace(fldFT, fldFT, kbin, mubin, power, kscatter, pscatter, occupation, numbins, numbinsmu, deconvolve, ktype);
+}
+
 #endif
 
 
@@ -506,6 +513,86 @@ void writePowerSpectrum(Real * kbin, Real * power, Real * kscatter, Real * pscat
 					fprintf(outfile, "  %e   %e   %e   %e   %d\n", kbin[i]/rescalek, power2[i], kscatter[i]/rescalek, pscatter[i]/rescalep/ sqrt(occupation[i]), occupation[i]);
 #else
 					fprintf(outfile, "  %e   %e   %e   %e   %d\n", kbin[i]/rescalek, power[i]/rescalep, kscatter[i]/rescalek, pscatter[i]/rescalep/ sqrt(occupation[i]), occupation[i]);
+#endif
+			}
+			fclose(outfile);
+		}
+#ifdef EXACT_OUTPUT_REDSHIFTS
+		free(power2);
+#endif
+	}
+}
+
+void writePowerSpectrumRedshiftSpace(Real * kbin, Real * mubin, Real * power, Real * kscatter, Real * pscatter, int * occupation, const int numbins, const int numbinsmu, const Real rescalek, const Real rescalep, const char * filename, const char * description, double a, const double z_target = -1)
+{
+	if (parallel.isRoot())
+	{
+#ifdef EXACT_OUTPUT_REDSHIFTS
+		Real * power2 = (Real *) malloc(numbins * sizeof(Real));
+
+		for (int i = 0; i < numbins*numbinsmu; i++)
+			power2[i] = power[i]/rescalep;
+
+		if (1. / a < z_target + 1.)
+		{
+			FILE * infile = fopen(filename, "r");
+			double weight = 1.;
+			int count = 0;
+			if (infile != NULL)
+			{
+				fscanf(infile, "%*[^\n]\n");
+				if (fscanf(infile, "# redshift z=%lf\n", &weight) != 1)
+				{
+					cout << " error parsing power spectrum file header for interpolation (EXACT_OUTPUT_REDSHIFTS)" << endl;
+					weight = 1.;
+				}
+				else
+				{
+					weight = (weight - z_target) / (1. + weight - 1./a);
+					fscanf(infile, "%*[^\n]\n");
+					for (int i = 0; i < numbins*numbinsmu; i++)
+					{
+						if (occupation[i] > 0)
+						{
+#ifdef SINGLE
+							if(fscanf(infile, " %*e %e %*e %*e %*d \n", power2+i) != 1)
+#else
+							if(fscanf(infile, " %*e %le %*e %*e %*d \n", power2+i) != 1)
+#endif
+							{
+								cout << " error parsing power spectrum file data " << i << " for interpolation (EXACT_OUTPUT_REDSHIFTS)" << endl;
+								break;
+							}
+							else count++;
+						}
+					}
+				}
+				fclose(infile);
+
+				for (int i = 0; i < numbins*numbinsmu; i++)
+					power2[i] = (1.-weight)*power2[i] + weight*power[i]/rescalep;
+
+				a = 1. / (z_target + 1.);
+			}
+		}
+#endif // EXACT_OUTPUT_REDSHIFTS
+		FILE * outfile = fopen(filename, "w");
+		if (outfile == NULL)
+		{
+			cout << " error opening file for power spectrum output!" << endl;
+		}
+		else
+		{
+			fprintf(outfile, "# %s\n", description);
+			fprintf(outfile, "# redshift z=%f\n", (1./a)-1.);
+			fprintf(outfile, "# k              mu           Pk             sigma(k)       sigma(Pk)      count\n");
+			for (int i = 0; i < numbins; i++)
+			{
+				if (occupation[i] > 0)
+#ifdef EXACT_OUTPUT_REDSHIFTS
+					fprintf(outfile, "  %e    %e   %e   %e   %e   %d\n", kbin[i]/rescalek, mubin[i], power2[i], kscatter[i]/rescalek, pscatter[i]/rescalep/ sqrt(occupation[i]), occupation[i]);
+#else
+					fprintf(outfile, "  %e    %e   %e   %e   %e   %d\n", kbin[i]/rescalek, mubin[i], power[i]/rescalep, kscatter[i]/rescalek, pscatter[i]/rescalep/ sqrt(occupation[i]), occupation[i]);
 #endif
 			}
 			fclose(outfile);
