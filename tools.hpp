@@ -212,6 +212,177 @@ void extractCrossSpectrum(Field<Cplx> & fld1FT, Field<Cplx> & fld2FT, Real * kbi
 }
 
 
+void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2FT, Real * kbin, Real * mubin, Real * power, Real * kscatter, Real * pscatter, int * occupation, const int numbins, const int numbinsmu, const bool deconvolve = true, const int ktype = KTYPE_LINEAR, const int comp1 = -1, const int comp2 = -1)
+{
+	int i, j, index, weight;
+	const int linesize = fld1FT.lattice().size(1);
+	Real * typek2;
+	Real * sinc;
+	Real k2max, k2, s, mu;
+	rKSite k(fld1FT.lattice());
+	Cplx p;
+	
+	typek2 = (Real *) malloc(linesize * sizeof(Real));
+	sinc = (Real *) malloc(linesize * sizeof(Real));
+	
+	if (ktype == KTYPE_GRID)
+	{
+		for (i = 0; i < linesize; i++)
+		{
+			typek2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
+			typek2[i] *= typek2[i];
+		}
+	}
+	else
+	{
+		for (i = 0; i <= linesize/2; i++)
+		{
+			typek2[i] = 2. * M_PI * (Real) i;
+			typek2[i] *= typek2[i];
+		}
+		for (; i < linesize; i++)
+		{
+			typek2[i] = 2. * M_PI * (Real) (linesize-i);
+			typek2[i] *= typek2[i];
+		}
+	}
+	
+	sinc[0] = 1.;
+	if (deconvolve)
+	{
+		for (i = 1; i <= linesize / 2; i++)
+		{
+			sinc[i] = sin(M_PI * (float) i / (float) linesize) * (float) linesize / (M_PI * (float) i);
+		}
+	}
+	else
+	{
+		for (i = 1; i <= linesize / 2; i++)
+		{
+			sinc[i] = 1.;
+		}
+	}
+	for (; i < linesize; i++)
+	{
+		sinc[i] = sinc[linesize-i];
+	}
+	
+	k2max = 3. * typek2[linesize/2];
+	
+	for (i = 0; i < numbins; i++)
+	{
+		kbin[i] = 0.;
+		power[i] = 0.;
+		kscatter[i] = 0.;
+		pscatter[i] = 0.;
+		occupation[i] = 0;
+	}
+	
+	for (k.first(); k.test(); k.next())
+	{
+		if (k.coord(0) == 0 && k.coord(1) == 0 && k.coord(2) == 0)
+			continue;
+		else if (k.coord(0) == 0)
+			weight = 1;
+		else if ((k.coord(0) == linesize/2) && (linesize % 2 == 0))
+			weight = 1;
+		else
+			weight = 2;
+			
+		k2 = typek2[k.coord(0)] + typek2[k.coord(1)] + typek2[k.coord(2)];
+        /* Compute mu */
+        mu = k.coord(0)/sqrt(k2)
+		s = sinc[k.coord(0)] * sinc[k.coord(1)] * sinc[k.coord(2)];
+		s *= s;
+		
+		if (comp1 >= 0 && comp2 >= 0 && comp1 < fld1FT.components() && comp2 < fld2FT.components())
+		{
+			p = fld1FT(k, comp1) * fld2FT(k, comp2).conj();
+		}
+		else if (fld1FT.symmetry() == LATfield2::symmetric)
+		{
+			p = fld1FT(k, 0, 1) * fld2FT(k, 0, 1).conj();
+			p += fld1FT(k, 0, 2) * fld2FT(k, 0, 2).conj();
+			p += fld1FT(k, 1, 2) * fld2FT(k, 1, 2).conj();
+			p *= 2.;
+			p += fld1FT(k, 0, 0) * fld2FT(k, 0, 0).conj();
+			p += fld1FT(k, 1, 1) * fld2FT(k, 1, 1).conj();
+			p += fld1FT(k, 2, 2) * fld2FT(k, 2, 2).conj();
+		}
+		else
+		{
+			p = Cplx(0., 0.);
+			for (i = 0; i < fld1FT.components(); i++)
+				p += fld1FT(k, i) * fld2FT(k, i).conj();
+		}
+		
+		i = (int) floor((double) ((Real) numbins * sqrt(k2 / k2max)));
+		j = floor((numbinsmu-1.0)/2. * mu + (numbinsmu-1.0)/2.)
+		index = numbins*i + j
+		if (index < numbins*numbinsmu) /*((i < numbins) && (j < numbinsmu))*/
+		{
+			kbin[index] += weight * sqrt(k2);
+            mubin[index] += weight * mu;
+			kscatter[index] += weight * k2;
+			power[index] += weight * p.real() * k2 * sqrt(k2) / s;
+			pscatter[index] += weight * p.real() * p.real() * k2 * k2 * k2 / s / s;
+			occupation[index] += weight;
+		}
+	}
+	
+	free(typek2);
+	free(sinc);
+
+	if (parallel.isRoot())
+    
+	{
+
+#ifdef SINGLE
+		MPI_Reduce(MPI_IN_PLACE, (void *) kbin, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce(MPI_IN_PLACE, (void *) kscatter, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce(MPI_IN_PLACE, (void *) power, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce(MPI_IN_PLACE, (void *) pscatter, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+#else
+		MPI_Reduce(MPI_IN_PLACE, (void *) kbin, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce(MPI_IN_PLACE, (void *) kscatter, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce(MPI_IN_PLACE, (void *) power, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce(MPI_IN_PLACE, (void *) pscatter, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+#endif
+		MPI_Reduce(MPI_IN_PLACE, (void *) occupation, numbins*numbinsmu, MPI_INT, MPI_SUM, 0, parallel.lat_world_comm());
+
+   
+		for (index = 0; index < numbins*numbinsmu; index++)
+		{
+			if (occupation[index] > 0)
+			{
+				kscatter[index] = sqrt(kscatter[index]  * occupation[index] - kbin[index] * kbin[index]) / occupation[index];
+				if (!isfinite(kscatter[index])) kscatter[index] = 0.;
+				kbin[index] = kbin[index] / occupation[index];
+				power[index] /= occupation[index];
+				pscatter[index] = sqrt(pscatter[index] / occupation[index] - power[index] * power[index]);
+				if (!isfinite(pscatter[index])) pscatter[index] = 0.;
+			}
+		}
+	}
+    
+	else
+	{
+#ifdef SINGLE
+		MPI_Reduce((void *) kbin, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce((void *) kscatter, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce((void *) power, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce((void *) pscatter, NULL, numbins*numbinsmu, MPI_FLOAT, MPI_SUM, 0, parallel.lat_world_comm());
+#else
+		MPI_Reduce((void *) kbin, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce((void *) kscatter, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce((void *) power, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+		MPI_Reduce((void *) pscatter, NULL, numbins*numbinsmu, MPI_DOUBLE, MPI_SUM, 0, parallel.lat_world_comm());
+#endif
+		MPI_Reduce((void *) occupation, NULL, numbins*numbinsmu, MPI_INT, MPI_SUM, 0, parallel.lat_world_comm());
+	}
+}
+
+
 //////////////////////////
 // extractPowerSpectrum
 //////////////////////////
