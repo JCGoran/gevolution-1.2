@@ -217,33 +217,35 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 	int i, j, index, weight;
 	const int linesize = fld1FT.lattice().size(1);
 	Real * typek2;
+    Real * typek;
 	Real * sinc;
 	Real k2max, k2, s, mu;
 	rKSite k(fld1FT.lattice());
 	Cplx p;
 	
 	typek2 = (Real *) malloc(linesize * sizeof(Real));
-	sinc = (Real *) malloc(linesize * sizeof(Real));
+	typek = (Real *) malloc(linesize * sizeof(Real));
+    sinc = (Real *) malloc(linesize * sizeof(Real));
 	
 	if (ktype == KTYPE_GRID)
 	{
 		for (i = 0; i < linesize; i++)
 		{
-			typek2[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
-			typek2[i] *= typek2[i];
+			typek[i] = 2. * (Real) linesize * sin(M_PI * (Real) i / (Real) linesize);
+			typek2[i] = typek[i]*typek[i];
 		}
 	}
 	else
 	{
 		for (i = 0; i <= linesize/2; i++)
 		{
-			typek2[i] = 2. * M_PI * (Real) i;
-			typek2[i] *= typek2[i];
+			typek[i] = 2. * M_PI * (Real) i;
+			typek2[i] = typek[i]*typek[i];
 		}
 		for (; i < linesize; i++)
 		{
-			typek2[i] = 2. * M_PI * (Real) (linesize-i);
-			typek2[i] *= typek2[i];
+			typek[i] = 2. * M_PI * (Real) (linesize-i);
+			typek2[i] = typek[i]*typek[i];
 		}
 	}
 	
@@ -292,7 +294,7 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 			
 		k2 = typek2[k.coord(0)] + typek2[k.coord(1)] + typek2[k.coord(2)];
         /* Compute mu */
-        mu = k.coord(0)/sqrt(k2);
+        mu = typek[k.coord(0)]/sqrt(k2);
 		s = sinc[k.coord(0)] * sinc[k.coord(1)] * sinc[k.coord(2)];
 		s *= s;
 		
@@ -332,6 +334,7 @@ void extractCrossSpectrumRedshiftSpace(Field<Cplx> & fld1FT, Field<Cplx> & fld2F
 	}
 	
 	free(typek2);
+    free(typek);
 	free(sinc);
 
 	if (parallel.isRoot())
