@@ -8,7 +8,7 @@
 //
 // Author: Julian Adamek (Université de Genève & Observatoire de Paris & Queen Mary University of London)
 //
-// Last modified: April 2019
+// Last modified: November 2019
 //
 //////////////////////////
 
@@ -108,8 +108,8 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
     long numpts3d = (long) sim.numpts * (long) sim.numpts * (long) sim.numpts;
 
   	background class_background;
+  	thermo class_thermo;
   	perturbs class_perturbs;
-  	spectra class_spectra;
 	
 	ic_fields[0] = phi;
 	ic_fields[1] = chi;
@@ -129,9 +129,9 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 	COUT << " initial particle horizon tau = " << tau * sim.numpts << " lattice units." << endl;
 
-	initializeCLASSstructures(sim, ic, cosmo, class_background, class_perturbs, class_spectra, params, numparam);
+	initializeCLASSstructures(sim, ic, cosmo, class_background, class_thermo, class_perturbs, params, numparam);
 
-	loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_d2, NULL, sim.boxsize, ic.z_ic, cosmo.h);
+	loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_d2, NULL, sim.boxsize, ic.z_ic, cosmo.h);
 
 	temp1 = (double *) malloc(tk_d1->size * sizeof(double));
 	temp2 = (double *) malloc(tk_d1->size * sizeof(double));
@@ -163,7 +163,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		}
 		
 		sprintf(ncdm_name, "ncdm[%d]", p);
-		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, ncdm_name, sim.boxsize, ic.z_ic, cosmo.h);
+		loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_t1, ncdm_name, sim.boxsize, ic.z_ic, cosmo.h);
 	
 		if (tk_d1 == NULL || tk_t1 == NULL)
 		{
@@ -261,7 +261,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 	
 				plan_source->execute(FFT_FORWARD);
 
-				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_d2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
+				loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_d2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
 
 				for (i = 0; i < tk_d1->size; i++)
 					temp1[i] = -tk_d1->y[i] * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i];
@@ -271,11 +271,11 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 				gsl_spline_free(tk_d1);
 				gsl_spline_free(tk_d2);
 
-				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "cdm", sim.boxsize, (1. / a) - 1., cosmo.h);
+				loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_t1, "cdm", sim.boxsize, (1. / a) - 1., cosmo.h);
 		
 				if (sim.baryon_flag > 0)
 				{
-					loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, "b", sim.boxsize, (1. / a) - 1., cosmo.h);
+					loadTransferFunctions(class_background, class_perturbs, tk_d2, tk_t2, "b", sim.boxsize, (1. / a) - 1., cosmo.h);
 
 					if (tk_d2->size != tk_d1->size)
 					{
@@ -495,7 +495,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 			if (cosmo.Omega_g > 0)
 			{
-				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "g", sim.boxsize, ic.z_ic, cosmo.h);
+				loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_t1, "g", sim.boxsize, ic.z_ic, cosmo.h);
 
 				for (i = 0; i < tk_d1->size; i++)
 					temp1[i] -= tk_d1->y[i] * cosmo.Omega_g * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i] / a;
@@ -506,7 +506,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 
 			if (cosmo.Omega_ur > 0)
 			{
-				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "ur", sim.boxsize, ic.z_ic, cosmo.h);
+				loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_t1, "ur", sim.boxsize, ic.z_ic, cosmo.h);
 
 				for (i = 0; i < tk_d1->size; i++)
 					temp1[i] -= tk_d1->y[i] * cosmo.Omega_ur * M_PI * sqrt(Pk_primordial(tk_d1->x[i] * cosmo.h / sim.boxsize, ic) / tk_d1->x[i]) / tk_d1->x[i] / a;
@@ -518,7 +518,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 			for (p = 0; p < cosmo.num_ncdm; p++)
 			{
 				sprintf(ncdm_name, "ncdm[%d]", p);
-				loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, ncdm_name, sim.boxsize, ic.z_ic, cosmo.h);
+				loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_t1, ncdm_name, sim.boxsize, ic.z_ic, cosmo.h);
 
 				rescale = bg_ncdm(a, cosmo, p);
 
@@ -554,7 +554,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 			relax_cycles++;
 	    }
 
-		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_d2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
+		loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_d2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
 
 		for (i = 0; i < tk_d1->size; i++)
 		{
@@ -674,8 +674,8 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 	{
 		COUT << " gravity theory = Newton: computing gauge transformation..." << endl;
 
-		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d1, tk_t1, "tot", sim.boxsize, (1. / a) - 1., cosmo.h);
-		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
+		loadTransferFunctions(class_background, class_perturbs, tk_d1, tk_t1, "tot", sim.boxsize, (1. / a) - 1., cosmo.h);
+		loadTransferFunctions(class_background, class_perturbs, tk_d2, tk_t2, NULL, sim.boxsize, (1. / a) - 1., cosmo.h);
 
 		for (i = 0; i < tk_d2->size; i++)
 			temp1[i] = -tk_d2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
@@ -741,7 +741,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 			COUT << " Poisson gauge -> N-body gauge, ncdm species " << p+1 << " maximum displacement = " << max_displacement * sim.numpts << " lattice units." << endl;
 		}
 
-		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, NULL, sim.boxsize, (1. / (0.99 * a)) - 1., cosmo.h);
+		loadTransferFunctions(class_background, class_perturbs, tk_d2, tk_t2, NULL, sim.boxsize, (1. / (0.99 * a)) - 1., cosmo.h);
 
 		for (i = 0; i < tk_d2->size; i++)
 			temp1[i] = -tk_d2->y[i] * M_PI * sqrt(Pk_primordial(tk_d2->x[i] * cosmo.h / sim.boxsize, ic) / tk_d2->x[i]) / tk_d2->x[i];
@@ -750,7 +750,7 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		gsl_spline_free(tk_d2);
 		gsl_spline_free(tk_t2);
 
-		loadTransferFunctions(class_background, class_perturbs, class_spectra, tk_d2, tk_t2, "tot", sim.boxsize, (1. / (0.99 * a)) - 1., cosmo.h);
+		loadTransferFunctions(class_background, class_perturbs, tk_d2, tk_t2, "tot", sim.boxsize, (1. / (0.99 * a)) - 1., cosmo.h);
 
 		rescale = 3. * Hconf(0.99 * a, fourpiG, cosmo) * M_PI;
 		mean_q = -99.5 * Hconf(0.995 * a, fourpiG, cosmo);
@@ -806,15 +806,16 @@ void generateIC_prevolution(metadata & sim, icsettings & ic, cosmology & cosmo, 
 		phi->updateHalo();
 	}
 
-	if (spectra_free(&class_spectra) == _FAILURE_)
-	{
-		COUT << " error: calling spectra_free from CLASS library failed!" << endl << " following error message was passed: " << class_spectra.error_message << endl;
-		parallel.abortForce();
-	}
 
 	if (perturb_free(&class_perturbs) == _FAILURE_)
 	{
 		COUT << " error: calling perturb_free from CLASS library failed!" << endl << " following error message was passed: " << class_perturbs.error_message << endl;
+		parallel.abortForce();
+	}
+	
+	if (thermodynamics_free(&class_thermo) == _FAILURE_)
+	{
+		COUT << " error: calling thermodynamics_free from CLASS library failed!" << endl << " following error message was passed: " << class_thermo.error_message << endl;
 		parallel.abortForce();
 	}
 
