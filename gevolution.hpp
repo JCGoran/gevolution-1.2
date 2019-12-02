@@ -890,9 +890,8 @@ void update_pos_Newton(double dtau, double dx, part_simple * part, double * ref_
 // Returns:
 //
 //////////////////////////
-
+//main projection function of gevolution unchanged
 template<typename part, typename part_info, typename part_dataType>
-//changes to do: copy of this function
 void projection_T00_project(Particles<part, part_info, part_dataType> * pcls, Field<Real> * T00, double a = 1., Field<Real> * phi = NULL, double coeff = 1.)
 {
 	if (T00->lattice().halo() == 0)
@@ -942,14 +941,12 @@ void projection_T00_project(Particles<part, part_info, part_dataType> * pcls, Fi
 				localCubePhi[6] = (*phi)(xField+0+1);
 				localCubePhi[7] = (*phi)(xField+0+1+2);
 			}
-			//iterate over pcl list inside the cell
+
 			for (it=(pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
 			{
 				for (int i=0; i<3; i++)
 				{
-					//*it :de-refernce
 					weightScalarGridUp[i] = ((*it).pos[i] - referPos[i]) / dx;
-
 					weightScalarGridDown[i] = 1.0l - weightScalarGridUp[i];
 				}
 
@@ -990,6 +987,101 @@ void projection_T00_project(Particles<part, part_info, part_dataType> * pcls, Fi
 			(*T00)(xField+0+1+2) += localCube[7] * mass;
 		}
 	}
+}
+
+
+
+
+template<typename part, typename part_info, typename part_dataType>
+
+
+//changes to do: copy of this function
+//probably should pass params to the function, since a is there you can pass the value at the redshift you want
+void projection_T00_project_RSD(Particles<part, part_info, part_dataType> * pcls, const cosmology cosmo, Field<Real> * T00, double a = 1., Field<Real> * phi = NULL, double coeff = 1.)//change:passed csomlogy params
+{
+	if (T00->lattice().halo() == 0)
+	{
+		cout<< "projection_T00_project: target field needs halo > 0" << endl;
+		exit(-1);
+	}
+
+	Site xPart(pcls->lattice());
+	Site xField(T00->lattice());
+
+	typename std::list<part>::iterator it;
+
+	Real referPos[3];
+	Real weightScalarGridUp[3];
+	Real weightScalarGridDown[3];
+	//changed
+	Real rsd_pos[3];
+	Real dx = pcls->res();
+
+	double mass = coeff / (dx*dx*dx);
+	mass *= *(double*)((char*)pcls->parts_info() + pcls->mass_offset());
+	mass /= a;
+
+	Real e = a, f = 0.;
+	Real * q;
+	size_t offset_q = offsetof(part,vel);
+
+	Real localCube[8]; // XYZ = 000 | 001 | 010 | 011 | 100 | 101 | 110 | 111
+	Real localCubePhi[8];
+
+	for (int i=0; i<8; i++) localCubePhi[i] = 0.0;
+	//Chenged
+	for (xPart.first(); xPart.test(); xPart.next())
+		{
+		if (pcls->field()(xPart).size != 0)
+		{
+		//for(int i=0; i<8; i++) localCube[i] = 0.0;
+
+		if (phi != NULL)
+		{
+		localCubePhi[0] = (*phi)(xField);
+		localCubePhi[1] = (*phi)(xField+2);
+		localCubePhi[2] = (*phi)(xField+1);
+		localCubePhi[3] = (*phi)(xField+1+2);
+		localCubePhi[4] = (*phi)(xField+0);
+		localCubePhi[5] = (*phi)(xField+0+2);
+		localCubePhi[6] = (*phi)(xField+0+1);
+		localCubePhi[7] = (*phi)(xField+0+1+2);
+		}
+
+		for (it=(pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
+		{
+		for (int i = 0; i < 3 ; i++)
+		rsd_pos[i] = (*it).pos[i];
+
+		rsd_pos[0] += (*it).vel[0]/Hconf(a,fourpiG,cosmo)/params[0];//check: units of velocity check: division by a
+		if (rsd_pos[0] < 0.) rsd_pos[0] += 1.;
+		if (rsd_pos[0] >= 1.) rsd_pos[0] -= 1.;
+
+		for(int i=0;i<3;i++)coord[i] = ((int)(floor(rsd_pos[i]/dx))) % pcls->lattice().size(i);
+
+		xField.setCoord(coord);
+
+		for (int i=0; i<3; i++)
+		{
+		weightScalarGridUp[i] = (rsd_pos[i] - coord[i]*dx) / dx;
+		weightScalarGridDown[i] = 1.0l - weightScalarGridUp[i];
+		}
+
+		//}
+
+		(T00)(xField)	+= localCube[0] mass;
+		(T00)(xField+2)	+= localCube[1] mass;
+		(T00)(xField+1)	+= localCube[2] mass;
+		(T00)(xField+1+2) += localCube[3] mass;
+		(T00)(xField+0)	+= localCube[4] mass;
+		(T00)(xField+0+2) += localCube[5] mass;
+		(T00)(xField+0+1) += localCube[6] mass;
+		(T00)(xField+0+1+2) += localCube[7] mass;
+		}
+		}
+		}
+	//changed
+
 }
 
 #define projection_T00_comm scalarProjectionCIC_comm
