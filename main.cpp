@@ -224,20 +224,29 @@ int main(int argc, char **argv)
 
 	Field<Real> phi;
 	Field<Real> source;
+	//changed
+	Field<Real> dens_rsd;
 	Field<Real> chi;
 	Field<Real> Sij;
 	Field<Real> Bi;
 	Field<Cplx> scalarFT;
+	//changed
+	Field<Cplx> dens_rsdFT;
 	Field<Cplx> SijFT;
 	Field<Cplx> BiFT;
 	//---initialize copy of particle fields --
 	source.initialize(lat,1);
+	dens_rsd.initialize(lat,1);
 	phi.initialize(lat,1);
 	chi.initialize(lat,1);
 	scalarFT.initialize(latFT,1);
+	//changed
+	dens_rsdFT.initialize(latFT,1);
 	PlanFFT<Cplx> plan_source(&source, &scalarFT);
 	PlanFFT<Cplx> plan_phi(&phi, &scalarFT);
 	PlanFFT<Cplx> plan_chi(&chi, &scalarFT);
+	//changed
+	PlanFFT<Cplx> plan_dens_rsd(&dens_rsd, &dens_rsdFT);
 	Sij.initialize(lat,3,3,symmetric);
 	SijFT.initialize(latFT,3,3,symmetric);
 	PlanFFT<Cplx> plan_Sij(&Sij, &SijFT);

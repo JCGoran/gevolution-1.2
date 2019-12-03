@@ -1758,12 +1758,13 @@ void writeLightcones(metadata & sim, cosmology & cosmo, const double fourpiG, co
 // Returns:
 //
 //////////////////////////
-
+//changed the input params
 void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const double a, const int pkcount,
 #ifdef HAVE_CLASS
 background & class_background, perturbs & class_perturbs, spectra & class_spectra, icsettings & ic,
 #endif
-Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij
+Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * dens_rsd, Field<Real> * Sij, Field<Cplx> * scalarFT,Field<Cplx> * dens_rsdFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij
+, PlanFFT<Cplx> * plan_dens_rsd
 #ifdef CHECK_B
 , Field<Real> * Bi_check, Field<Cplx> * BiFT_check, PlanFFT<Cplx> * plan_Bi_check
 #endif
@@ -2034,7 +2035,15 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 		  extractPowerSpectrum<MU_BINS>(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 			sprintf(filename, "%s%s%03d_delta_multipoles.dat", sim.output_path, sim.basename_pk, pkcount);
 			writePowerSpectrum<MU_BINS>(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta", a, sim.z_pk[pkcount]);
+			//change
+			projection_init(dens_rsd);
+			projection_T00_project_RSD(pcls_cdm, cosmo,dens_rsd,fourpiG, a, phi);//we did pass phi //pcls_cdm are displaced ones
+			plan_dens_rsd->execute(FFT_FORWARD)
+			extractPowerSpectrum<MU_BINS>(*dens_rsdFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
+			sprintf(filename, "%s%s%03d_delta_multipoles_pcls_displaced.dat", sim.output_path, sim.basename_pk, pkcount);
+			writePowerSpectrum<MU_BINS>(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta RSD", a, sim.z_pk[pkcount]);
 		}
+
 
 		if (cosmo.num_ncdm > 0 || sim.baryon_flag || sim.radiation_flag > 0 || sim.fluid_flag > 0)
 		{
