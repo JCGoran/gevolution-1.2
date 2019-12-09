@@ -1822,6 +1822,7 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 		{
 			if (sim.numpcl[1+sim.baryon_flag+i] == 0) continue;
 			scalarProjectionCIC_project(pcls_ncdm+i, source);
+			scalarProjectionCIC_project(pcls_ncdm+i, dens_rsd);
 		}
 		scalarProjectionCIC_comm(source);
 		plan_source->execute(FFT_FORWARD);
@@ -1980,9 +1981,10 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, 2. * M_PI * M_PI, filename, "power spectrum of hij", a, sim.z_pk[pkcount]);
 	}
 
-	if ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.gr_flag > 0)
+	if ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) || sim.out_pk & MASK_MULTIPOLES && sim.gr_flag > 0)
 	{
 		projection_init(source);
+		projection_init(dens_rsd);
 #ifdef HAVE_CLASS
 		if (sim.radiation_flag > 0 || sim.fluid_flag > 0)
 		{
@@ -2031,16 +2033,25 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 		{
 		  COUT<<"We reached the point!";
 		  // plan_multipoles->execute(FFT_FORWARD);
-		  extractPowerSpectrum<MU_BINS>(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
+		    extractPowerSpectrum<MU_BINS>(*scalarFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 			sprintf(filename, "%s%s%03d_delta_multipoles.dat", sim.output_path, sim.basename_pk, pkcount);
 			writePowerSpectrum<MU_BINS>(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta", a, sim.z_pk[pkcount]);
 			//change
-			projection_init(dens_rsd);
-			projection_T00_project_RSD(pcls_cdm, cosmo,dens_rsd,fourpiG, a, phi);//we did pass phi //pcls_cdm are displaced ones
+			//projection_init(dens_rsd);
+			projection_T00_project_RSD(pcls_cdm, cosmo, dens_rsd,fourpiG, a, phi);//we did pass phi //pcls_cdm are displaced ones
+            if (sim.baryon_flag)
+			 projection_T00_project_RSD(pcls_b, cosmo, dens_rsd,fourpiG, a, phi);
+		    for (i = 0; i < cosmo.num_ncdm; i++)
+		    {
+			if (sim.numpcl[1+sim.baryon_flag+i] == 0) continue;
+			projection_T00_project_RSD(pcls_ncdm+i, cosmo, dens_rsd,fourpiG, a, phi);
+		    }
+		    projection_T00_comm(dens_rsd);
 			plan_dens_rsd->execute(FFT_FORWARD);
 			extractPowerSpectrum<MU_BINS>(*dens_rsdFT, kbin, power, kscatter, pscatter, occupation, sim.numbins, true, KTYPE_LINEAR);
 			sprintf(filename, "%s%s%03d_delta_multipoles_pcls_displaced.dat", sim.output_path, sim.basename_pk, pkcount);
 			writePowerSpectrum<MU_BINS>(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta RSD", a, sim.z_pk[pkcount]);
+			plan_dens_rsd->execute(FFT_BACKWARD);
 		}
 
 

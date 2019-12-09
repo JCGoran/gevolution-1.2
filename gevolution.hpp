@@ -1026,46 +1026,38 @@ void projection_T00_project_RSD(Particles<part, part_info, part_dataType> * pcls
 
 	Real localCube[8]; // XYZ = 000 | 001 | 010 | 011 | 100 | 101 | 110 | 111
 	Real localCubePhi[8];
+    int coord_rsd[3];
 
 	for (int i=0; i<8; i++) localCubePhi[i] = 0.0;
+	for(int i=0; i<3; i++) rsd_pos[i] = 0.0;
+	for(int i=0; i<3; i++) referPos[i] = xPart.coord(i)*dx;
 
-	for (xPart.first(),xField.first(); xPart.test(); xPart.next(),xField.next())
+	for (xPart.first(); xPart.test(); xPart.next())
 	{
 		if (pcls->field()(xPart).size != 0)
 		{
-			for(int i=0; i<3; i++) referPos[i] = xPart.coord(i)*dx;
+			//for(int i=0; i<3; i++) referPos[i] = xPart.coord(i)*dx; 
 			for(int i=0; i<8; i++) localCube[i] = 0.0;
 
-			if (phi != NULL)
-			{
-				localCubePhi[0] = (*phi)(xField);
-				localCubePhi[1] = (*phi)(xField+2);
-				localCubePhi[2] = (*phi)(xField+1);
-				localCubePhi[3] = (*phi)(xField+1+2);
-				localCubePhi[4] = (*phi)(xField+0);
-				localCubePhi[5] = (*phi)(xField+0+2);
-				localCubePhi[6] = (*phi)(xField+0+1);
-				localCubePhi[7] = (*phi)(xField+0+1+2);
-			}
 			for (it=(pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
 			{
-				for (int i = 0; i < 3 ; i++)
-				rsd_pos[i] = (*it).pos[i];
+				for (int i = 0; i < 3 ; i++) rsd_pos[i] = (*it).pos[i];
 
-				//rsd_pos[0] += (*it).vel[0]/Hconf(a,fourpiG,cosmo)/a;//check: units of velocity check: division by a
+				rsd_pos[0] += (*it).vel[0]/Hconf(a,fourpiG,cosmo)/a;//check: units of velocity check: division by a
 
 				if (rsd_pos[0] < 0.) rsd_pos[0] += 1.;
 				if (rsd_pos[0] >= 1.) rsd_pos[0] -= 1.;
 				//change
-				int coord_rsd[3];
-				for(int i=0;i<3;i++)coord_rsd[i] = ((int)(floor(rsd_pos[i]/dx))) % pcls->lattice().size(i);
+				//int coord_rsd[3];
+				for(int i=0;i<3;i++) coord_rsd[i] = ((int)(floor(rsd_pos[i]/dx))) % pcls->lattice().size(i);
 
 				xField.setCoord(coord_rsd);
+
 				for (int i=0; i<3; i++)
 				{
 					//weightScalarGridUp[i] = ((*it).pos[i] - referPos[i]) / dx; //((*it).pos[i] - referPos[i]) / dx;
-					//weightScalarGridUp[i] = (rsd_pos[i] - coord_rsd[i]*dx) / dx;
-				        weightScalarGridUp[i] = (rsd_pos[i] - referPos[i]*dx) / dx;
+					weightScalarGridUp[i] = (rsd_pos[i] - coord_rsd[i]*dx) / dx;
+				    //weightScalarGridUp[i] = ((*it).pos[i]- referPos[i]*dx) / dx;
 					weightScalarGridDown[i] = 1.0l - weightScalarGridUp[i];
 				}
 
@@ -1077,6 +1069,18 @@ void projection_T00_project_RSD(Particles<part, part_info, part_dataType> * pcls
 					e = sqrt(f + a * a);
 					f = 3. * e + f / e;
 				}
+
+                if (phi != NULL)
+			    {
+				localCubePhi[0] = (*phi)(xField);
+				localCubePhi[1] = (*phi)(xField+2);
+				localCubePhi[2] = (*phi)(xField+1);
+				localCubePhi[3] = (*phi)(xField+1+2);
+				localCubePhi[4] = (*phi)(xField+0);
+				localCubePhi[5] = (*phi)(xField+0+2);
+				localCubePhi[6] = (*phi)(xField+0+1);
+				localCubePhi[7] = (*phi)(xField+0+1+2);
+			    }
 
 				//000
 				localCube[0] += weightScalarGridDown[0]*weightScalarGridDown[1]*weightScalarGridDown[2]*(e+f*localCubePhi[0]);
@@ -1165,13 +1169,13 @@ void projection_T00_project_rsdgarbage(Particles<part, part_info, part_dataType>
 		for (int i = 0; i < 3 ; i++)
 		rsd_pos[i] = (*it).pos[i];
 
-		rsd_pos[0] += (*it).vel[0]/Hconf(a,fourpiG,cosmo)/a;//check: units of velocity check: division by a
+		rsd_pos[0] += (*it).vel[0]/Hconf(a,fourpiG,cosmo)/a; //check: units of velocity check: division by a
 
 		if (rsd_pos[0] < 0.) rsd_pos[0] += 1.;
 		if (rsd_pos[0] >= 1.) rsd_pos[0] -= 1.;
 		//change
 		int coord_rsd[3];
-		for(int i=0;i<3;i++)coord_rsd[i] = ((int)(floor(rsd_pos[i]/dx))) % pcls->lattice().size(i);
+		for(int i=0;i<3;i++) coord_rsd[i] = ((int)(floor(rsd_pos[i]/dx))) % pcls->lattice().size(i);
 
 		xField.setCoord(coord_rsd);
 
