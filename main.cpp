@@ -222,19 +222,24 @@ int main(int argc, char **argv)
 
 	Field<Real> phi;
 	Field<Real> source;
+    Field<Real> dens_rsd;
 	Field<Real> chi;
 	Field<Real> Sij;
 	Field<Real> Bi;
 	Field<Cplx> scalarFT;
+    Field<Cplx> dens_rsdFT;
 	Field<Cplx> SijFT;
 	Field<Cplx> BiFT;
 	source.initialize(lat,1);
+    dens_rsd.initialize(lat,1);
 	phi.initialize(lat,1);
 	chi.initialize(lat,1);
 	scalarFT.initialize(latFT,1);
+    dens_rsdFT.initialize(latFT,1);
 	PlanFFT<Cplx> plan_source(&source, &scalarFT);
 	PlanFFT<Cplx> plan_phi(&phi, &scalarFT);
 	PlanFFT<Cplx> plan_chi(&chi, &scalarFT);
+    PlanFFT<Cplx> plan_dens_rsd(&dens_rsd, &dens_rsdFT);
 	Sij.initialize(lat,3,3,symmetric);
 	SijFT.initialize(latFT,3,3,symmetric);
 	PlanFFT<Cplx> plan_Sij(&Sij, &SijFT);
@@ -641,7 +646,7 @@ int main(int argc, char **argv)
 #ifdef HAVE_CLASS
 				class_background, class_perturbs, ic,
 #endif
-				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
+				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &source, &dens_rsd, &Sij, &scalarFT, &dens_rsdFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_dens_rsd, &plan_Sij
 #ifdef CHECK_B
 				, &Bi_check, &BiFT_check, &plan_Bi_check
 #endif
@@ -676,7 +681,7 @@ int main(int argc, char **argv)
 #ifdef HAVE_CLASS
 				class_background, class_perturbs, ic,
 #endif
-				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &source, &Sij, &scalarFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_Sij
+				&pcls_cdm, &pcls_b, pcls_ncdm, &phi, &chi, &Bi, &source, &dens_rsd, &Sij, &scalarFT, &dens_rsdFT, &BiFT, &SijFT, &plan_phi, &plan_chi, &plan_Bi, &plan_source, &plan_dens_rsd, &plan_Sij
 #ifdef CHECK_B
 				, &Bi_check, &BiFT_check, &plan_Bi_check
 #endif

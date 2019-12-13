@@ -1763,7 +1763,7 @@ void writeSpectra(metadata & sim, cosmology & cosmo, const double fourpiG, const
 #ifdef HAVE_CLASS
 background & class_background, perturbs & class_perturbs, icsettings & ic,
 #endif
-Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_Sij
+Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_cdm, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_b, Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_ncdm, Field<Real> * phi, Field<Real> * chi, Field<Real> * Bi, Field<Real> * source, Field<Real> *dens_rsd, Field<Real> * Sij, Field<Cplx> * scalarFT, Field<Cplx> * dens_rsdFT, Field<Cplx> * BiFT, Field<Cplx> * SijFT, PlanFFT<Cplx> * plan_phi, PlanFFT<Cplx> * plan_chi, PlanFFT<Cplx> * plan_Bi, PlanFFT<Cplx> * plan_source, PlanFFT<Cplx> * plan_dens_rsd, PlanFFT<Cplx> * plan_Sij
 #ifdef CHECK_B
 , Field<Real> * Bi_check, Field<Cplx> * BiFT_check, PlanFFT<Cplx> * plan_Bi_check
 #endif
@@ -1984,9 +1984,10 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 		writePowerSpectrum(kbin, power, kscatter, pscatter, occupation, sim.numbins, sim.boxsize, 2. * M_PI * M_PI, filename, "power spectrum of hij", a, sim.z_pk[pkcount]);
 	}
 			
-	if ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) && sim.gr_flag > 0)
+	if ((sim.out_pk & MASK_T00 || sim.out_pk & MASK_DELTA) || (sim.out_pk & MASK_MULTIPOLES) && sim.gr_flag > 0)
 	{
 		projection_init(source);
+        projection_init(dens_rsd);
 #ifdef HAVE_CLASS
 		if (sim.radiation_flag > 0 || sim.fluid_flag > 0)
 		{
@@ -2032,18 +2033,21 @@ Particles_gevolution<part_simple,part_simple_info,part_simple_dataType> * pcls_c
 		}
 
         /* Here we modify for the redshift space power-spectrum */
-				if (sim.out_pk & MASK_T00)
+		if (sim.out_pk & MASK_MULTIPOLES)
 		{
-			sprintf(filename, "%s%s%03d_T00RedshiftSpace.dat", sim.output_path, sim.basename_pk, pkcount);
-			extractPowerSpectrumRedshiftSpace(*scalarFT, kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, true, KTYPE_LINEAR);
-			writePowerSpectrumRedshiftSpace(kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * pow(a, 6.0), filename, "power spectrum of T00", a, sim.z_pk[pkcount]);
-		}
-
-		if (sim.out_pk & MASK_DELTA)
-		{
+            /* the moved particles */
 			sprintf(filename, "%s%s%03d_deltaRedshiftSpace.dat", sim.output_path, sim.basename_pk, pkcount);
+            projection_T00_project_RSD(pcls_cdm, cosmo, dens_rsd, fourpiG, a, phi);
+            projection_T00_comm(dens_rsd);
+            plan_dens_rsd->execute(FFT_FORWARD);
+			extractPowerSpectrumRedshiftSpace(*dens_rsdFT, kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, true, KTYPE_LINEAR);
+			writePowerSpectrumRedshiftSpace(kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta in redhisft space", a, sim.z_pk[pkcount]);
+            plan_dens_rsd->execute(FFT_BACKWARD);
+
+            /* the unmoved particles */
+			sprintf(filename, "%s%s%03d_deltaRedshiftSpace_undisplaced.dat", sim.output_path, sim.basename_pk, pkcount);
 			extractPowerSpectrumRedshiftSpace(*scalarFT, kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, true, KTYPE_LINEAR);
-			writePowerSpectrumRedshiftSpace(kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta", a, sim.z_pk[pkcount]);
+			writePowerSpectrumRedshiftSpace(kbin, mubin, power, kscatter, pscatter, occupation, sim.numbins, numbinsmu, sim.boxsize, (Real) numpts3d * (Real) numpts3d * 2. * M_PI * M_PI * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)) * (cosmo.Omega_cdm + cosmo.Omega_b + bg_ncdm(a, cosmo)), filename, "power spectrum of delta in redhisft space", a, sim.z_pk[pkcount]);
 		}
 
 		/* End of modifications */

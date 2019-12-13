@@ -1523,5 +1523,125 @@ void move_redshift_space(
         (*part).pos[0] += (*part).vel[0] / params[0];
 }
 
+template<typename part, typename part_info, typename part_dataType>
+//changes to do: copy of this function
+//probably should pass params to the function, since a is there you can pass the value at the redshift you want
+void projection_T00_project_RSD(Particles<part, part_info, part_dataType> * pcls, const cosmology cosmo, Field<Real> * T00, double fourpiG, double a = 1., Field<Real> * phi = NULL, double coeff = 1.)
+{
+	if (T00->lattice().halo() == 0)
+	{
+		cout<< "projection_T00_project: target field needs halo > 0" << endl;
+		exit(-1);
+	}
+
+	Site xPart(pcls->lattice());
+	Site xField(T00->lattice());
+
+	typename std::list<part>::iterator it;
+
+	Real referPos[3];
+	Real weightScalarGridUp[3];
+	Real weightScalarGridDown[3];
+	Real dx = pcls->res();
+	//changed
+	Real rsd_pos[3];
+
+	double mass = coeff / (dx*dx*dx);
+	mass *= *(double*)((char*)pcls->parts_info() + pcls->mass_offset());
+	mass /= a;
+
+	Real e = a, f = 0.;
+	Real * q;
+	size_t offset_q = offsetof(part,vel);
+
+	Real localCube[8]; // XYZ = 000 | 001 | 010 | 011 | 100 | 101 | 110 | 111
+	Real localCubePhi[8];
+    int coord_rsd[3];
+
+	for (int i=0; i<8; i++) localCubePhi[i] = 0.0;
+	for(int i=0; i<3; i++) rsd_pos[i] = 0.0;
+	for(int i=0; i<3; i++) referPos[i] = xPart.coord(i)*dx;
+
+	for (xPart.first(); xPart.test(); xPart.next())
+	{
+		if (pcls->field()(xPart).size != 0)
+		{
+			//for(int i=0; i<3; i++) referPos[i] = xPart.coord(i)*dx; 
+			for(int i=0; i<8; i++) localCube[i] = 0.0;
+
+			for (it=(pcls->field())(xPart).parts.begin(); it != (pcls->field())(xPart).parts.end(); ++it)
+			{
+				for (int i = 0; i < 3 ; i++) rsd_pos[i] = (*it).pos[i];
+
+				rsd_pos[0] += (*it).vel[0]/Hconf(a,fourpiG,cosmo)/a;//check: units of velocity check: division by a
+
+				if (rsd_pos[0] < 0.) rsd_pos[0] += 1.;
+				if (rsd_pos[0] >= 1.) rsd_pos[0] -= 1.;
+				//change
+				//int coord_rsd[3];
+				for(int i=0;i<3;i++) coord_rsd[i] = ((int)(floor(rsd_pos[i]/dx))) % pcls->lattice().size(i);
+
+				xField.setCoord(coord_rsd);
+
+				for (int i=0; i<3; i++)
+				{
+					//weightScalarGridUp[i] = ((*it).pos[i] - referPos[i]) / dx; //((*it).pos[i] - referPos[i]) / dx;
+					weightScalarGridUp[i] = (rsd_pos[i] - coord_rsd[i]*dx) / dx;
+				    //weightScalarGridUp[i] = ((*it).pos[i]- referPos[i]*dx) / dx;
+					weightScalarGridDown[i] = 1.0l - weightScalarGridUp[i];
+				}
+
+				if (phi != NULL)
+				{
+					q = (Real*)((char*)&(*it)+offset_q);
+
+					f = q[0] * q[0] + q[1] * q[1] + q[2] * q[2];
+					e = sqrt(f + a * a);
+					f = 3. * e + f / e;
+				}
+
+                if (phi != NULL)
+			    {
+				localCubePhi[0] = (*phi)(xField);
+				localCubePhi[1] = (*phi)(xField+2);
+				localCubePhi[2] = (*phi)(xField+1);
+				localCubePhi[3] = (*phi)(xField+1+2);
+				localCubePhi[4] = (*phi)(xField+0);
+				localCubePhi[5] = (*phi)(xField+0+2);
+				localCubePhi[6] = (*phi)(xField+0+1);
+				localCubePhi[7] = (*phi)(xField+0+1+2);
+			    }
+
+				//000
+				localCube[0] += weightScalarGridDown[0]*weightScalarGridDown[1]*weightScalarGridDown[2]*(e+f*localCubePhi[0]);
+				//001
+				localCube[1] += weightScalarGridDown[0]*weightScalarGridDown[1]*weightScalarGridUp[2]*(e+f*localCubePhi[1]);
+				//010
+				localCube[2] += weightScalarGridDown[0]*weightScalarGridUp[1]*weightScalarGridDown[2]*(e+f*localCubePhi[2]);
+				//011
+				localCube[3] += weightScalarGridDown[0]*weightScalarGridUp[1]*weightScalarGridUp[2]*(e+f*localCubePhi[3]);
+				//100
+				localCube[4] += weightScalarGridUp[0]*weightScalarGridDown[1]*weightScalarGridDown[2]*(e+f*localCubePhi[4]);
+				//101
+				localCube[5] += weightScalarGridUp[0]*weightScalarGridDown[1]*weightScalarGridUp[2]*(e+f*localCubePhi[5]);
+				//110
+				localCube[6] += weightScalarGridUp[0]*weightScalarGridUp[1]*weightScalarGridDown[2]*(e+f*localCubePhi[6]);
+				//111
+				localCube[7] += weightScalarGridUp[0]*weightScalarGridUp[1]*weightScalarGridUp[2]*(e+f*localCubePhi[7]);
+			}
+
+			(*T00)(xField)	   += localCube[0] * mass;
+			(*T00)(xField+2)	 += localCube[1] * mass;
+			(*T00)(xField+1)	 += localCube[2] * mass;
+			(*T00)(xField+1+2)   += localCube[3] * mass;
+			(*T00)(xField+0)	 += localCube[4] * mass;
+			(*T00)(xField+0+2)   += localCube[5] * mass;
+			(*T00)(xField+0+1)   += localCube[6] * mass;
+			(*T00)(xField+0+1+2) += localCube[7] * mass;
+		}
+	}
+}
+
+
 #endif
 

@@ -65,6 +65,7 @@
 #define MASK_DBARE  8192
 #define MASK_MULTI  16384
 #define MASK_VEL    32768
+#define MASK_MULTIPOLES  65536
 
 #define ICFLAG_CORRECT_DISPLACEMENT 1
 #define ICFLAG_KSPHERE              2

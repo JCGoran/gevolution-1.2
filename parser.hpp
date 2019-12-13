@@ -687,6 +687,8 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 					pvalue |= MASK_DBARE;
 				else if (strcmp(item, "v") == 0 || strcmp(item, "velocity") == 0)
 					pvalue |= MASK_VEL;
+                else if (strcmp(item, "multipoles") == 0)
+                    pvalue |= MASK_MULTIPOLES;
 					
 				start = comma+1;
 				while (*start == ' ' || *start == '\t') start++;
@@ -724,6 +726,8 @@ bool parseFieldSpecifiers(parameter * & params, const int numparam, const char *
 				pvalue |= MASK_DBARE;
 			else if (strcmp(start, "v") == 0 || strcmp(start, "velocity") == 0)
 					pvalue |= MASK_VEL;
+            else if (strcmp(start, "multipoles") == 0)
+                    pvalue |= MASK_MULTIPOLES;
 			
 			params[i].used = true;
 			return true;
