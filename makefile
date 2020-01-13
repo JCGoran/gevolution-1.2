@@ -19,7 +19,7 @@ DLATFIELD2   := -DFFT3D -DHDF5
 # optional compiler settings (gevolution)
 DGEVOLUTION  := -DPHINONLINEAR
 DGEVOLUTION  += -DBENCHMARK
-DGEVOLUTION  += -DEXACT_OUTPUT_REDSHIFTS
+DGEVOLUTION  += -DEXACT_OUTPUT_REDSHIFTS -DGEVOLUTION_DEBUG
 #DGEVOLUTION  += -DVELOCITY      # enables velocity field utilities
 #DGEVOLUTION  += -DCOLORTERMINAL
 #DGEVOLUTION  += -DCHECK_B
@@ -27,7 +27,7 @@ DGEVOLUTION  += -DEXACT_OUTPUT_REDSHIFTS
 #DGEVOLUTION  += -DHAVE_HEALPIX  # requires LIB -lchealpix
 
 # further compiler options
-OPT          := -O3 -std=c++11
+OPT          := -O0 -std=c++11 -g
 
 $(EXEC): $(SOURCE) $(HEADERS) makefile
 	$(COMPILER) $< -o $@ $(OPT) $(DLATFIELD2) $(DGEVOLUTION) $(INCLUDE) $(LIB)

@@ -63,6 +63,12 @@
 #include "velocity.hpp"
 #endif
 
+#ifdef GEVOLUTION_DEBUG
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#endif
+
 using namespace std;
 using namespace LATfield2;
 
@@ -160,6 +166,35 @@ int main(int argc, char **argv)
 	if(parallel.isIO()) ioserver.start();
 	else
 	{
+#endif
+#ifdef GEVOLUTION_DEBUG
+    if (parallel.isRoot()){
+        const int max_size = 1024;
+
+        // get home directory
+        char *home = getenv("HOME");
+
+        char filename[max_size];
+        strncpy(filename, home, max_size);
+        strncat(filename, "/.__gevolution_debug", max_size);
+        FILE *file = fopen(filename, "w");
+        fprintf(file, "%d ", getpid());
+
+        // get hostname
+        char hostname[max_size];
+        gethostname(hostname, sizeof(hostname));
+
+        fprintf(file, "%s ", hostname);
+
+        // programmatically get the filename
+        fprintf(file, "%s ", __FILE__);
+
+        int i = 0;
+
+        // programmatically get the line number
+        // the below is single line to get a consistent line number
+        fprintf(file, "%ld", __LINE__); fclose(file); while (0 == i) sleep(5);
+    }
 #endif
 	
 	COUT << COLORTEXT_WHITE << endl;	
