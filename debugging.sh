@@ -58,7 +58,7 @@ then
                 printf "ERROR: unable to find 'gdb' on remote '${h}'\n" 1>&2
                 exit 4
             else
-                ssh "${h}" "${cmd}"
+                ssh -t "${h}" "${cmd}"
             fi
         fi
     fi
